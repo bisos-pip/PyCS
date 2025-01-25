@@ -2,22 +2,37 @@
 bisos.PyCS: Python Command-Services Framework.
 ==============================================
 
-:Author: Mohsen BANAN
-:Date:   <2024-02-19 Mon 16:27>
-
 .. contents::
    :depth: 3
 ..
 
+Panel Controls:: `Show-All <elisp:(show-all)>`__
+`Overview <elisp:(org-shifttab)>`__
+`Content <elisp:(progn (org-shifttab) (org-content))>`__ \|
+`(1) <elisp:(delete-other-windows)>`__ \|
+`S&Q <elisp:(progn (save-buffer) (kill-buffer))>`__
+`Save <elisp:(save-buffer)>`__ `Quit <elisp:(kill-buffer)>`__
+`Bury <elisp:(bury-buffer)>`__ Links:
+`file:./panels/_nodeBase_/fullUsagePanel-en.org <./panels/_nodeBase_/fullUsagePanel-en.org>`__
+(Package Panel)
+
 Overview
 ========
 
-bisos.PyCS is a python package that uses the PyCS-Framework for NOTYET.
-It is a BISOS-Capability and a Standalone-BISOS-Package.
+`Python Command Services <https://github.com/bisos-pip/pycs>`__ is a
+unified model and framework for development of both Commands and
+Services. Unlike `Click <https://github.com/pallets/click>`__, Docopt
+and Typer which are just for commands development and unlike
+`FastAPI <https://github.com/fastapi/fastapi>`__, Pydantic, gRPC and
+OpenAPI which are just for services development, PyCS does both. Native
+PyCS uses `RPyC <https://github.com/tomerfiliba-org/rpyc>`__ to
+transform commands into services.
 
-*bisos.PyCS* is based on PyCS-Foundation and can be used both as a
-Command and as a Service (invoke/perform model of remote operations)
-using RPYC for central management of multiple systems.
+*bisos.PyCS* is based on PyCS-Foundation (bisos.b) and can be used both
+as a Command and as a Service (invoke/perform model of remote
+operations) using RPyC for central management of multiple systems.
+PyCS-Framework extends the PyCS-Foundation by providing common
+additional modules which ease development of applications.
 
 .. _table-of-contents:
 
