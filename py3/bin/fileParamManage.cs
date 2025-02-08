@@ -507,7 +507,7 @@ class fileParamRead(cs.Cmnd):
                 parName=parName,
             )
         except IOError:
-            b_io.eh.badOutcome(f"Missing parRoot={parRoot} parName={parName}")
+            cmndOutcome.set(opError="IOError", opErrInfo=f"Missing parRoot={parRoot} parName={parName}")
             return failed(cmndOutcome)
 
         # print((fileParam.parValueGet()))
@@ -588,7 +588,7 @@ class fileParamReadPath(cs.Cmnd):
                 parRoot=parRoot,
             )
         except IOError:
-            b_io.eh.badOutcome(f"Missing parRoot={parRoot} parName={parName}")
+            cmndOutcome.set(opError="IOError", opErrInfo=f"Missing parRoot={parRoot} parName={parName}")
             return failed(cmndOutcome)
 
         # print((fileParam.parValueGet()))

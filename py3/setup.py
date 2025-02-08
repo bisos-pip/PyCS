@@ -43,7 +43,7 @@ def longDescription():
 # b:py3:pypi:setup/version Arguments  :forSys t :forPyPi t :constant "666"
 ####+BEGIN: b:py3:pypi:setup/version :comment "Auto Detected"
 
-# ./pypiUploadVer DID NOT exist -- forPypiVersion=0.23 -- forSysVersion=0.1 -- constant=NA
+# ./pypiUploadVer DID NOT exist -- forPypiVersion=0.1 -- forSysVersion=0.1 -- constant=NA
 def pkgVersion():
         return '0.1'
 
@@ -66,6 +66,7 @@ requires = [
 
 scripts = [
 'bin/fileParamManage.cs',
+'bin/fileTreeManage.py',
 'bin/pyPkgTools.cs',
 ]
 ####+END:
