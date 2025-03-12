@@ -96,7 +96,9 @@ import decimal
 
 # from get_pypi_latest_version import GetPyPiLatestVersion
 
-# import ast
+from pathlib import Path
+
+from bisos.pycs import dependencies
 
 """ #+begin_org
 *  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_ _[[elisp:(blee:menu-sel:navigation:popupMenu)][Ξ]]_ [[elisp:(outline-show-branches+toggle)][|=]] [[elisp:(bx:orgm:indirectBufOther)][|>]] *[[elisp:(blee:ppmm:org-mode-toggle)][|N]]*  CsFrmWrk   [[elisp:(outline-show-subtree+toggle)][||]] ~csuList emacs-list Specifications~  [[elisp:(blee:org:code-block/above-run)][ /Eval Below/ ]] [[elisp:(org-cycle)][| ]]
@@ -104,11 +106,11 @@ import decimal
 (setq  b:py:cs:csuList
   (list
    "bisos.b.cs.ro"
-   "blee.csPlayer.bleep"
+   "bisos.csPlayer.bleep"
  ))
 #+END_SRC
 #+RESULTS:
-| bisos.b.cs.ro | blee.csPlayer.bleep |
+| bisos.b.cs.ro | bisos.csPlayer.bleep |
 #+end_org """
 
 ####+BEGIN: b:py3:cs:framework/csuListProc :pyImports t :csuImports t :csuParams t
@@ -117,10 +119,10 @@ import decimal
 #+end_org """
 
 from bisos.b.cs import ro
-from blee.csPlayer import bleep
+from bisos.csPlayer import bleep
 
 
-csuList = [ 'bisos.b.cs.ro', 'blee.csPlayer.bleep', ]
+csuList = [ 'bisos.b.cs.ro', 'bisos.csPlayer.bleep', ]
 
 g_importedCmndsModules = cs.csuList_importedModules(csuList)
 
@@ -171,6 +173,8 @@ class examples(cs.Cmnd):
         cmnd = cs.examples.cmndEnter
         literal = cs.examples.execInsert
 
+        onePyModule="bisos.facter"
+
         cs.examples.menuChapter('=PyPi Latest Version=')
 
         cmnd('pypiLatestVersion', args='''bisos.facter''')
@@ -179,7 +183,12 @@ class examples(cs.Cmnd):
         cs.examples.menuChapter('=get_pypi_latest_version=')
 
         literal("get_pypi_latest_version bisos.facter")
-        literal("pip index versions {inPypiPkg} 2> /dev/null  | grep LATEST | cut -d ':' -f 2  | xargs echo")
+        literal(f"pip index versions {onePyModule} 2> /dev/null  | grep LATEST | cut -d ':' -f 2  | xargs echo")
+
+        cs.examples.menuChapter('=Update requirements.pipx and requirements.pip files.=')
+
+        cmnd('pipxDependenciesUpdate', args=onePyModule)
+        cmnd('pipDependenciesUpdate', args=onePyModule)
 
         return(cmndOutcome)
 
@@ -332,14 +341,135 @@ pip index versions {inPypiPkg}  2> /dev/null | grep 'Available versions' | cut -
         cmndArgsSpecDict.argsDictAdd(
             argPosition="0",
             argName="inPypiPkg",
-            argChoices=[],
             argDescription="Pypi Packages"
         )
         cmndArgsSpecDict.argsDictAdd(
             argPosition="1",
             argName="increment",
-            argChoices=[],
             argDescription="Increment"
+        )
+        return cmndArgsSpecDict
+
+
+####+BEGIN: b:py3:cs:cmnd/classHead :cmndName "pipxDependenciesUpdate" :comment "" :extent "verify" :ro "cli" :parsMand "" :parsOpt "" :argsMin 1 :argsMax 1 :pyInv ""
+""" #+begin_org
+*  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_ _[[elisp:(blee:menu-sel:navigation:popupMenu)][Ξ]]_ [[elisp:(outline-show-branches+toggle)][|=]] [[elisp:(bx:orgm:indirectBufOther)][|>]] *[[elisp:(blee:ppmm:org-mode-toggle)][|N]]*  CmndSvc-   [[elisp:(outline-show-subtree+toggle)][||]] <<pipxDependenciesUpdate>>  =verify= argsMin=1 argsMax=1 ro=cli   [[elisp:(org-cycle)][| ]]
+#+end_org """
+class pipxDependenciesUpdate(cs.Cmnd):
+    cmndParamsMandatory = [ ]
+    cmndParamsOptional = [ ]
+    cmndArgsLen = {'Min': 1, 'Max': 1,}
+
+    @cs.track(fnLoc=True, fnEntry=True, fnExit=True)
+    def cmnd(self,
+             rtInv: cs.RtInvoker,
+             cmndOutcome: b.op.Outcome,
+             argsList: typing.Optional[list[str]]=None,  # CsArgs
+    ) -> b.op.Outcome:
+
+        failed = b_io.eh.badOutcome
+        callParamsDict = {}
+        if self.invocationValidate(rtInv, cmndOutcome, callParamsDict, argsList).isProblematic():
+            return failed(cmndOutcome)
+        cmndArgsSpecDict = self.cmndArgsSpec()
+####+END:
+        self.cmndDocStr(f""" #+begin_org
+** [[elisp:(org-cycle)][| *CmndDesc:* | ]]  arg0 is ~inPypiPkg~.
+        #+end_org """)
+
+        inPypiPkg = self.cmndArgsGet("0", cmndArgsSpecDict, argsList)
+        if not inPypiPkg: return(b_io.eh.badOutcome(cmndOutcome))
+
+        dependencies.pipxPkgInstall(inPypiPkg)  # return if failed
+        venvPath: str =  dependencies.pipxVenvPathGet(inPypiPkg)
+        print(f"{inPypiPkg} is installed at: {venvPath}")
+
+        deps: str = dependencies.pipxDependenciesStr(inPypiPkg)
+        print(deps)
+
+        dependencies.pipxDependenciesToFile(inPypiPkg, deps)
+
+        return cmndOutcome.set(opResults=f"{inPypiPkg}",)
+
+####+BEGIN: b:py3:cs:method/args :methodName "cmndArgsSpec" :methodType "anyOrNone" :retType "bool" :deco "default" :argsList "self"
+    """ #+begin_org
+**  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_ _[[elisp:(blee:menu-sel:navigation:popupMenu)][Ξ]]_ [[elisp:(outline-show-branches+toggle)][|=]] [[elisp:(bx:orgm:indirectBufOther)][|>]] *[[elisp:(blee:ppmm:org-mode-toggle)][|N]]*  Mtd-T-anyOrNone [[elisp:(outline-show-subtree+toggle)][||]] /cmndArgsSpec/ deco=default  deco=default  [[elisp:(org-cycle)][| ]]
+    #+end_org """
+    @cs.track(fnLoc=True, fnEntry=True, fnExit=True)
+    def cmndArgsSpec(self, ):
+####+END:
+        """  #+begin_org
+*** [[elisp:(org-cycle)][| *cmndArgsSpec:* | ]] arg0 is ~inFile~
+        #+end_org """
+
+        cmndArgsSpecDict = cs.arg.CmndArgsSpecDict()
+        cmndArgsSpecDict.argsDictAdd(
+            argPosition="0",
+            argName="inPypiPkg",
+            argDescription="Pypi Packages"
+        )
+        return cmndArgsSpecDict
+
+####+BEGIN: b:py3:cs:cmnd/classHead :cmndName "pipDependenciesUpdate" :comment "" :extent "verify" :ro "cli" :parsMand "" :parsOpt "" :argsMin 1 :argsMax 1 :pyInv ""
+""" #+begin_org
+*  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_ _[[elisp:(blee:menu-sel:navigation:popupMenu)][Ξ]]_ [[elisp:(outline-show-branches+toggle)][|=]] [[elisp:(bx:orgm:indirectBufOther)][|>]] *[[elisp:(blee:ppmm:org-mode-toggle)][|N]]*  CmndSvc-   [[elisp:(outline-show-subtree+toggle)][||]] <<pipDependenciesUpdate>>  =verify= argsMin=1 argsMax=1 ro=cli   [[elisp:(org-cycle)][| ]]
+#+end_org """
+class pipDependenciesUpdate(cs.Cmnd):
+    cmndParamsMandatory = [ ]
+    cmndParamsOptional = [ ]
+    cmndArgsLen = {'Min': 1, 'Max': 1,}
+
+    @cs.track(fnLoc=True, fnEntry=True, fnExit=True)
+    def cmnd(self,
+             rtInv: cs.RtInvoker,
+             cmndOutcome: b.op.Outcome,
+             argsList: typing.Optional[list[str]]=None,  # CsArgs
+    ) -> b.op.Outcome:
+
+        failed = b_io.eh.badOutcome
+        callParamsDict = {}
+        if self.invocationValidate(rtInv, cmndOutcome, callParamsDict, argsList).isProblematic():
+            return failed(cmndOutcome)
+        cmndArgsSpecDict = self.cmndArgsSpec()
+####+END:
+        self.cmndDocStr(f""" #+begin_org
+** [[elisp:(org-cycle)][| *CmndDesc:* | ]]  arg0 is ~inPypiPkg~.
+        #+end_org """)
+
+        inPypiPkg = self.cmndArgsGet("0", cmndArgsSpecDict, argsList)
+        if not inPypiPkg: return(b_io.eh.badOutcome(cmndOutcome))
+
+        package_name = inPypiPkg
+
+        venv_path = Path(f"./{package_name}_venv")
+
+        dependencies.pipVenvCreate(venv_path)
+        dependencies.pipPkgInstall(venv_path, package_name)
+
+        deps = dependencies.pipDependenciesStr(venv_path)
+        print(deps)
+
+        dependencies.pipDependenciesToFile(package_name, deps)
+
+
+        return cmndOutcome.set(opResults=f"{inPypiPkg}",)
+
+####+BEGIN: b:py3:cs:method/args :methodName "cmndArgsSpec" :methodType "anyOrNone" :retType "bool" :deco "default" :argsList "self"
+    """ #+begin_org
+**  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_ _[[elisp:(blee:menu-sel:navigation:popupMenu)][Ξ]]_ [[elisp:(outline-show-branches+toggle)][|=]] [[elisp:(bx:orgm:indirectBufOther)][|>]] *[[elisp:(blee:ppmm:org-mode-toggle)][|N]]*  Mtd-T-anyOrNone [[elisp:(outline-show-subtree+toggle)][||]] /cmndArgsSpec/ deco=default  deco=default  [[elisp:(org-cycle)][| ]]
+    #+end_org """
+    @cs.track(fnLoc=True, fnEntry=True, fnExit=True)
+    def cmndArgsSpec(self, ):
+####+END:
+        """  #+begin_org
+*** [[elisp:(org-cycle)][| *cmndArgsSpec:* | ]] arg0 is ~inFile~
+        #+end_org """
+
+        cmndArgsSpecDict = cs.arg.CmndArgsSpecDict()
+        cmndArgsSpecDict.argsDictAdd(
+            argPosition="0",
+            argName="inPypiPkg",
+            argDescription="Pypi Packages"
         )
         return cmndArgsSpecDict
 

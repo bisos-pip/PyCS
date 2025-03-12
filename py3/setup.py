@@ -43,21 +43,20 @@ def longDescription():
 # b:py3:pypi:setup/version Arguments  :forSys t :forPyPi t :constant "666"
 ####+BEGIN: b:py3:pypi:setup/version :comment "Auto Detected"
 
-# ./pypiUploadVer DID NOT exist -- forPypiVersion=0.1 -- forSysVersion=0.1 -- constant=NA
+# ./pypiUploadVer DID NOT exist -- forPypiVersion=0.25 -- forLocalVersion=0.1 -- constant=NA
 def pkgVersion():
         return '0.1'
 
 ####+END:
 
 # b:py3:pypi:setup/requires :extras ; :requirements "requirements.txt" (bring here requirements.txt)
-####+BEGINNOT: b:py3:pypi:setup/requires :extras ()
+####+BEGIN: b:py3:pypi:setup/requires :extras ()
 
-requires = [ 
-"blee",
-"blee.csPlayer",
+requires = [
 "bisos",
 "bisos.b",
 "bisos.common",
+"bisos.csPlayer",
 ]
 ####+END:
 
@@ -66,7 +65,8 @@ requires = [
 
 scripts = [
 'bin/fileParamManage.cs',
-'bin/fileTreeManage.py',
+'bin/fileParamManage.py',
+'bin/fileTreeManage.cs',
 'bin/pyPkgTools.cs',
 ]
 ####+END:
