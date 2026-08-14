@@ -1,0 +1,387 @@
+#+title: Spread Planted Command Services (=.spcs=) --- The PyCS Substrate for Walkable Trees
+#+DATE: <2026-08-14 Fri>
+#+AUTHOR: Mohsen BANAN
+#+OPTIONS: toc:3
+
+* Overview
+
+/Spread Planted Command Service/ (=.spcs=) is a PyCS pattern in which
+identical =.spcs= file content is planted at many filesystem locations
+and each planted instance is *contextualised entirely by its
+directory*. Combined with =bisos.fileObj='s tree walker, this
+substrate becomes a *general-purpose framework for building walkable
+tree consumers*: any set of directories (a BPO tree, a
+=bro_dockerfiles= layout, a content collection, etc.) can be walked
+top-down and each leaf can carry its own domain semantics.
+
+This document lives in =bisos.pycs= because =.spcs= is a PyCS-substrate
+concept (implemented in =bisos.csSeed= on top of =bisos.b=). The tree
+abstraction (=bisos.fileObj=) and concrete consumers
+(=bisos.dockerProc= and future =bisos.lcnt=, static-web, etc.) compose
+on top of it.
+
+* Table of Contents     :TOC:
+- [[#overview][Overview]]
+- [[#reading-the-figure][Reading the Figure]]
+- [[#the-three-layers-in-depth][The Three Layers, In Depth]]
+  - [[#layer-1-pycs-substrate-bisoscsseed][Layer 1: PyCS Substrate (=bisos.csSeed=)]]
+  - [[#layer-2-tree-abstraction-bisosfileobj][Layer 2: Tree Abstraction (=bisos.fileObj=)]]
+  - [[#layer-3-concrete-consumers][Layer 3: Concrete Consumers]]
+- [[#what-a-walkable-tree-looks-like][What a Walkable Tree Looks Like]]
+- [[#the-first-concrete-consumer-bisosdockerproc][The First Concrete Consumer: =bisos.dockerProc=]]
+- [[#future-concrete-consumers][Future Concrete Consumers]]
+- [[#relation-to-the-bash-reference][Relation to the Bash Reference]]
+- [[#skills-skills-skills][Skills, Skills, Skills]]
+- [[#canonical-references][Canonical References]]
+
+* Reading the Figure
+
+[[file:../py3/images/spcsArchitecture.png]]
+
+*Legend:*
+
+| Colour / Shape           | Meaning                                                          |
+|--------------------------+------------------------------------------------------------------|
+| =lightsteelblue= cluster   | *Box 1* --- PyCS Infrastructure (frozen framework, consumed as-is) |
+| =mistyrose= cluster        | *Box 2* --- Custom Seed (authored per new domain)                  |
+| =darkseagreen3= cluster    | *Box 3* --- Planted Tree (on-disk BPO, built by planting)          |
+| =salmon= rarrow            | Dispatcher / walker Cmnd / =.spcs= file                            |
+| =lightblue= rectangle      | Declared typed data (=WalkExampleSpec=, =walkExamples()=)            |
+| =lightyellow= folder       | On-disk directory in the BPO tree                                |
+| =thistle= ellipse          | Engineer / user                                                  |
+| =dodgerblue= edge (solid)  | Data flow / import ("is a", "populates")                         |
+| =dodgerblue= edge (dotted) | "planted at" (framework or seed file → tree directory)           |
+| =purple= edge (solid)      | Runtime dispatch (walker Cmnd walking to a leaf)                 |
+| Dashed black edge        | Internal wiring / authoring relationship                         |
+
+*The three boxes, stacked foundation-up (Box 1 at the bottom, Box 3
+at the top). Numbering follows the layered-architecture convention
+--- =Box 1= is the foundation everything else rests on:*
+
+1. *(1) PyCS Infrastructure --- frozen framework.* Everything already
+   built in bisos-pip that the engineer *consumes as-is*: the
+   =.spcs= / =.pcs= mechanism from =bisos.csSeed= (=plantWithWhich()=,
+   atexit registrar, =seededCsxuInfo=); and the tree machinery from
+   =bisos.fileObj= (the walker, the branch-side =.spcs=+seed pair, the
+   two forwarding Cmnds, the =WalkExampleSpec= dataclass). The
+   engineer does not modify any of this --- they just call it.
+
+2. *(2) Custom Seed --- authored per new domain.* The one thing the
+   engineer writes when adding a new capability. Contents: a
+   =<domain>-seed.cs= CSXU (with =csuList= + =g_csMain=); a
+   =_seedInfo.py= carrying =paramsFromPlantPath()= and =walkExamples()=;
+   a =_csu.py= with the actual Cmnds; a small leaf =.spcs= file that
+   plants the seed at each leaf directory. Today: =containerProc-seed.cs=
+   for docker containers. Tomorrow: =lcntProc-seed.cs=,
+   =staticWebProc-seed.cs=, and others.
+
+3. *(3) Planted Tree --- built by planting, not writing Python.* The
+   on-disk BPO / bro_ tree the engineer assembles by dropping marker
+   files and copies of =.spcs= into directories. Each branch directory
+   gets =_tree_==branch=, =_treeProc_==ftoBranchProc.spcs=, plus a
+   planted copy of =ftoBranchProc.spcs= (from Box 1). Each leaf
+   directory gets =_tree_==leaf=, =_treeProc_==<domain>.spcs=, plus a
+   planted copy of the leaf =.spcs= (from Box 2) and the leaf payload
+   itself (Dockerfile, LaTeX sources, HTML, whatever).
+
+*The composition, edge by edge:*
+
+- *Leaf =.spcs= "is a" =.spcs / .pcs mechanism="* (dodgerblue solid, from
+  Box 2 to Box 1). The specific leaf =.spcs= file for a domain is just
+  an instance of the framework's =.spcs= pattern; it plugs into the
+  substrate's =plantWithWhich=/atexit machinery.
+- *=walkExamples()= "populates" =WalkExampleSpec="* (dodgerblue solid,
+  from Box 2 to Box 1). The domain seed's =walkExamples()= produces a
+  list of framework-defined typed records. Adding a new leaf Cmnd
+  means updating =walkExamples()= once; every planted branch picks
+  it up.
+- *=ftoBranchProc.spcs= "planted at branches"* (dodgerblue dotted, from
+  Box 1 to Box 3). Every branch directory in the tree gets a copy of
+  the same file --- it's the "spread" in Spread Planted CS.
+- *Leaf =.spcs= "planted at leaves"* (dodgerblue dotted, from Box 2 to
+  Box 3). Every leaf directory gets a copy of the domain's leaf =.spcs=.
+- *=fto walker + Cmnds= "walks to" leaf dir* (purple solid, from Box 1 to
+  Box 3). At runtime, when the engineer invokes
+  =./ftoBranchProc.spcs -i fto_forwardToLeaves --cmndName=X=, the walker
+  traverses the tree and subprocesses each leaf's =.spcs -i X=.
+- *Engineer authors Box 2, plants + invokes Box 3.* The engineer's only
+  direct arrows are to Box 2 (the seed they write) and Box 3 (the tree
+  they build and walk). Box 1 is never touched.
+
+* The Three Layers, In Depth
+
+** Layer 1: PyCS Substrate (=bisos.csSeed=)
+
+The =.spcs= / =.pcs= mechanism is a two-file pattern:
+
+- A *seed CSXU* (e.g. =foo-seed.cs=) declares a =csuList=, defines
+  Cmnds, and provides =g_csMain=. It's the *engine*.
+- A *planted CSU* (e.g. =foo.spcs=) is a small Python module planted in
+  the directory that wants to be a "consumer" of the seed. It imports
+  a companion =foo_seed.py= module which has an =atexit=-registered
+  =plantWithWhich('foo-seed.cs')= call. When the =.spcs= is executed
+  directly, its top-level runs, then exits; the =atexit= hook fires
+  and =plantWithWhich= re-invokes the seed CSXU with =plantOfThisSeed=
+  pointing at the =.spcs= file itself.
+
+The seed then imports the =.spcs= as =plantedCsu=, dispatches Cmnds
+through its =csuList=, and can consult =seededCsxuInfo.plantOfThisSeed=
+to know which planted file is driving this run --- and by extension,
+where on the filesystem to operate.
+
+Two variants:
+
+- *=.pcs= (Planted Command Service)*: parameters come from
+  *within the file* --- each =.pcs= is authored individually for its
+  target (e.g. =airflow-here-dns.pcs= names a specific FQDN).
+- *=.spcs= (Spread Planted Command Service)*: parameters come from the
+  *directory path* --- the same =.spcs= file content is planted at many
+  locations, and each location is characterised by
+  =Path(plantOfThisSeed).resolve()=. The seed exposes a
+  =paramsFromPlantPath()= function to derive per-location parameters.
+
+See the =seeded-cs-commands= and =spread-seeded-cs-commands= skills for
+the authoring recipes; canonical reference implementations are
+=bisos.capDns= (=.pcs=, scalar controlInfo style), =bisos.sbom= (=.pcs=,
+typed-list-via-=setup()= style), and =bisos.dockerProc= (=.spcs=,
+path-derived params).
+
+** Layer 2: Tree Abstraction (=bisos.fileObj=)
+
+=bisos.fileObj= adds *filesystem trees* to the substrate. Its =fto=
+module (File Tree Object) defines a small vocabulary:
+
+- =branch= --- a directory that has children and gets the walker's
+  attention (a =_tree_= file containing =branch=).
+- =auxBranch= --- a directory the walker *traverses* but does *not*
+  apply commands at (a =_tree_= file containing =auxBranch=).
+- =leaf= --- a terminal directory that gets commands applied
+  (=_tree_= = =leaf=).
+- =auxLeaf= --- a leaf-like directory the walker recognises but does
+  *not* apply to.
+- =ignore= --- a directory (and everything below) the walker skips
+  entirely.
+
+Each node's =_treeProc_= file names its *processor* --- typically a
+=.spcs= file planted in that directory. When the walker reaches a
+node, it looks up =_treeProc_= and invokes it (subprocess) or a
+callable command (in-process).
+
+On top of this, =bisos.fileObj= provides:
+
+- =ftoBranchProc.spcs= + =ftoBranch-seed.cs= --- the *branch-side*
+  =.spcs= framework. Any branch in any tree that wants to be walkable
+  plants this. It's completely domain-agnostic.
+- =fto_forwardToLeaves= Cmnd (*Mode 1*) --- forwards =-i <cmndName>=
+  to each effective leaf's =_treeProc_=. The verb is understood by the
+  leaf's own dispatcher.
+- =fto_walkRunExternal= Cmnd (*Mode 2*) --- invokes an *external* cmnd
+  at every visited node. The leaf's =_treeProc_= is used only as a
+  marker; the external cmnd supplies its own executable.
+- =WalkExampleSpec= dataclass --- typed record of a walk-example
+  (=cmndName=, =pars=, =args=, =comment=, =mode=, =tags=). Populated
+  by domain seeds, consumed by the branch-side =examples_csu= to
+  render menu entries.
+
+** Layer 3: Concrete Consumers
+
+A concrete consumer is a pair: a *domain leaf-seed package* (e.g.
+=bisos.dockerProc=) and a *BPO or bro_ tree* (e.g. =bro_dockerfiles=)
+that plants that seed at its leaves.
+
+The leaf-seed package provides:
+
+- A =_seed.py= atexit registrar (registers its own =-seed.cs=).
+- A =_seedInfo.py= with (a) =paramsFromPlantPath()= that derives
+  per-leaf params from the leaf's directory; (b) a =walkExamples()=
+  function that returns a list of =WalkExampleSpec= entries --- the
+  authoritative "which of my Cmnds make sense to walk with" list.
+- A =_csu.py= with the Cmnd implementations.
+- A =-seed.cs= CSXU that wires everything together.
+
+The BPO tree provides:
+
+- The directory hierarchy itself.
+- =_tree_= / =_treeProc_= markers at each level.
+- Planted =ftoBranchProc.spcs= copies at intermediate branches (with
+  optional =ftoBranch_seedInfo.setup(leafExamples=...)= wiring at the
+  root or top branch).
+- Planted leaf =.spcs= copies at each leaf.
+
+The branch's =.spcs= imports the domain seed's =walkExamples()= and
+hands it to =ftoBranch_seedInfo.setup=. From that point, the branch's
+examples menu auto-generates one entry per =WalkExampleSpec=, and
+adding a new leaf Cmnd requires updating =walkExamples()= *once* --- no
+per-tree edits.
+
+* What a Walkable Tree Looks Like
+
+A minimal walkable tree, showing marker files and planted =.spcs=:
+
+#+begin_example
+  someRoot/                          ← branch
+  ├── _tree_        = branch
+  ├── _treeProc_    = ftoBranchProc.spcs
+  ├── ftoBranchProc.spcs             ← imports leaf-seed's walkExamples()
+  ├── intermediate/                  ← auxBranch (pass-through)
+  │   ├── _tree_        = auxBranch
+  │   ├── _treeProc_    = ftoBranchProc.spcs
+  │   ├── ftoBranchProc.spcs         ← plain stub (autodiscover)
+  │   ├── leafA/                     ← leaf
+  │   │   ├── _tree_        = leaf
+  │   │   ├── _treeProc_    = someProc.spcs
+  │   │   ├── someProc.spcs          ← plants domain seed
+  │   │   └── ... (leaf payload)
+  │   └── leafB/                     ← leaf
+  │       └── ...
+  └── other/                         ← branch (parallel sub-tree)
+      └── ...
+#+end_example
+
+The engineer then, from =someRoot/=:
+
+#+begin_example
+  ./ftoBranchProc.spcs                            # bare: examples menu with 13+ auto-generated
+                                                  # leaf walk-example entries
+  ./ftoBranchProc.spcs -i fto_treeList            # dry-run walk showing branch/auxBranch/leaf tags
+  ./ftoBranchProc.spcs -i fto_forwardToLeaves --cmndName=someLeafVerb
+  ./ftoBranchProc.spcs -i fto_walkRunExternal git status --short
+#+end_example
+
+* The First Concrete Consumer: =bisos.dockerProc=
+
+The first end-to-end consumer of this pattern is =bisos.dockerProc=:
+
+- Leaf seed: =bisos.dockerProc.containerProc-seed.cs=.
+- Leaf =.spcs=: =dockerProc.spcs= (docker leaves), =podmanProc.spcs=
+  (rootless-sysd leaves).
+- =paramsFromPlantPath()=: anchors on the =debian/= segment, derives
+  =release=, =profile=, =engine=, port assignments, and =imageName=.
+- =walkExamples()=: 13 =WalkExampleSpec= entries covering the full
+  =containerProc_*= surface (=instancePs=, =imageBuild=, =instanceUp=,
+  =instanceCommit=, =imageSave=, =fullClean=, etc.), tagged
+  =read-only= / =destructive= / =backup=.
+- BPO tree: =bxObjects/bro_dockerfiles/= (six leaves under
+  =debian/{12,13}/{confined,privileged,rootless-sysd}/vnc/xfce/=).
+- Pilot planting: =debian/12/confined/= carries the branch-side
+  =ftoBranchProc.spcs=; intermediate =vnc/= and =vnc/xfce/= are
+  =auxBranch= pass-throughs; the =bisos_deb12-fresh= leaf carries
+  =dockerProc.spcs=.
+
+At the branch, =./ftoBranchProc.spcs= (bare) shows the full
+=fto_*= menu plus a "Leaf-Provided Walk Examples" chapter containing
+all 13 =containerProc_*= entries --- rendered live from
+=walkExamples()=.
+
+* Future Concrete Consumers
+
+The pattern is deliberately general. Currently planned or anticipated:
+
+- *=bisos.lcnt=* (LaTeX-based content). =lcntProc.spcs= at each content
+  leaf; =lcntProc-seed.cs= exposes Cmnds like =lcnt_build=,
+  =lcnt_publish=. Trees under =bro_lcnt/= or =/lcnt/lgpc/...=.
+- *Static web publication*. A =webProc.spcs= at each web-content leaf;
+  Cmnds for build / deploy / verify. Trees under a
+  =bro_staticWeb/= or per-site BPO.
+- *Package repositories*. A parallel Python =pypiProc.spcs= (replacing
+  the bash =pypiProc.sh=) at each =bisos-pip/<pkg>/py3/= directory.
+  Verbs like =pkgReInstall=, =devBinSymlinks=, =fullPrepBuild=. Tree at
+  =bisos-pip/=.
+
+Adding a new consumer is a small, uniform amount of work:
+
+1. Author the leaf seed (=_seed.py=, =_seedInfo.py= with
+   =paramsFromPlantPath()= and =walkExamples()=, =_csu.py=, =-seed.cs=).
+2. Plant the leaf =.spcs= in each target directory.
+3. Plant =ftoBranchProc.spcs= at the top of the tree; wire it to import
+   =walkExamples()=.
+
+* Relation to the Bash Reference
+
+The =.spcs= + fileObj pattern is a corrected replacement for the bash
+tree-walker stack under =/bisos/core/bsip/bin/=:
+
+- =lcnObjectTree.libSh= --- bash's =vis_treeRecurse=,
+  =vis_ftoWalkRunCmnd=, =vis_effectiveLeaves=, =vis_effectiveNodes=.
+- =seedFtoCommon.sh= --- the bash seed with =seedExamplesType="pypi"=
+  hook.
+- =ftoProc.sh= --- the bash planted file (one per branch).
+
+Corrections in the Python port:
+
+- *Vocabulary*: bash =node= → Python =branch=, bash =auxNode= →
+  =auxBranch=. A tree is made of *nodes*; each node is either a
+  *branch* (has children) or a *leaf* (endpoint). The Python
+  vocabulary matches the CS literature. Backward-compat read
+  (=fromString= handles both) so bash-written marker files still work.
+- *Two explicit modes*: =fto_forwardToLeaves= (Mode 1) and
+  =fto_walkRunExternal= (Mode 2) are separate Cmnds. Bash conflated
+  them behind a single =-i= verb string dispatched by inspection.
+- *Typed data for examples*: =WalkExampleSpec= list replaces bash's
+  scalar =seedExamplesType="pypi"= + hardcoded =pypiFtpWalks()=
+  function. Composable, uniform rendering.
+- *Planted-copy precedence*: the walker resolves =_treeProc_= from the
+  *node directory first*, PATH second. Bash's implicit-PATH resolution
+  was silent and error-prone.
+
+The two systems (bash and Python) *do not share =_tree_= / =_treeProc_=
+files*. Where a directory tree carries markers for both, they live in
+disjoint =_tree_= scopes (typically bash markers under =_nodeBase_/=,
+Python markers at the leaf directory itself).
+
+* Skills, Skills, Skills
+
+The authoring mechanics live in three skills:
+
+| Skill                     | Covers                                                  |
+|---------------------------+---------------------------------------------------------|
+| =seeded-cs-commands=        | =.pcs= (Planted CS) --- scalar and typed-list styles      |
+| =spread-seeded-cs-commands= | =.spcs= (Spread Planted CS) --- path-derived params       |
+| =writing-cs-commands=       | =cs.Cmnd= subclass shape (classHead dblock, params, args) |
+
+For the =bisos.fileObj= specifics (which live in =bisos.fileObj=, not
+here):
+
+- =bisos.fileObj/AI-DevStatus.org= --- current state, architecture,
+  what works, what's untested.
+- =bisos.fileObj/AI-WorkPlan.org= --- Stage 1 (walker + branch =.spcs=
+  framework) and Stage 2 (walking + typed leaf examples) design
+  history.
+
+* Canonical References
+
+*=bisos.csSeed= (substrate):*
+- =/bisos/git/auth/bxRepos/bisos-pip/csSeed/py3/bisos/csSeed/seedsLib.py=
+  --- =plantWithWhich=, =SeededCsxuInfo=.
+- =/bisos/git/auth/bxRepos/bisos-pip/csSeed/py3/bin/addCmnds-seed.cs=
+  --- minimal reference seed.
+
+*=bisos.fileObj= (tree abstraction):*
+- =/bisos/git/auth/bxRepos/bisos-pip/fileObj/py3/bisos/fileObj/fto.py=
+  --- walker library.
+- =/bisos/git/auth/bxRepos/bisos-pip/fileObj/py3/bisos/fileObj/fto_csu.py=
+  --- =fto_*= Cmnd surface.
+- =/bisos/git/auth/bxRepos/bisos-pip/fileObj/py3/bisos/fileObj/ftoBranch_seedInfo.py=
+  --- =WalkExampleSpec=, =FtoBranchSeedInfo= singleton, =setup()=.
+- =/bisos/git/auth/bxRepos/bisos-pip/fileObj/py3/bin/ftoBranch-seed.cs=,
+  =ftoBranchProc.spcs= --- branch-side seed and planted template.
+
+*=bisos.dockerProc= (first concrete consumer):*
+- =/bisos/git/auth/bxRepos/bisos-pip/dockerProc/py3/bisos/dockerProc/containerProc_seedInfo.py=
+  --- =paramsFromPlantPath()=, =walkExamples()=.
+- =/bisos/git/auth/bxRepos/bisos-pip/dockerProc/py3/bin/containerProc-seed.cs=
+  --- domain seed CSXU.
+- =/bisos/git/auth/bxRepos/bxObjects/bro_dockerfiles/debian/12/confined/=
+  --- pilot planted branch.
+
+*Bash reference (for comparison):*
+- =/bisos/core/bsip/bin/lcnObjectTree.libSh=
+- =/bisos/core/bsip/bin/seedFtoCommon.sh=
+- =/bisos/git/auth/bxRepos/bisos-pip/ftoProc.sh=
+
+*Source of this figure:*
+- =/bisos/git/auth/bxRepos/bisos-pip/pycs/py3/images/spcsArchitecture-graphviz.pcs=
+
+# Local Variables:
+# eval: (setq-local toc-org-max-depth 4)
+# End:

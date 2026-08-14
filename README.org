@@ -77,6 +77,16 @@ See https://github.com/bisos-pip/b for an overview.
 
 Within BISOS,  bisos.PyCS is used as a common facility.
 
+*Spread Planted Command Services (=.spcs=)* --- a PyCS pattern for
+planting identical file content at many filesystem locations and
+letting each planted instance be characterised by its directory. When
+composed with =bisos.fileObj='s tree walker, =.spcs= becomes a
+general-purpose framework for walkable trees (=bisos.dockerProc= over
+=bro_dockerfiles= is the first end-to-end consumer; future consumers
+include =bisos.lcnt=, static-web publication, and others). See
+[[file:spcs/README.org][spcs/README.org]] for architecture, figure, and
+canonical references.
+
 
 * bisos.PyCS as a Standalone Piece of BISOS
 

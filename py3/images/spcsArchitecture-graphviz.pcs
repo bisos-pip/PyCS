@@ -1,0 +1,324 @@
+#!/usr/bin/env python
+
+####+BEGIN: b:prog:file/particulars :authors ("./inserts/authors-mb.org")
+""" #+begin_org
+* *[[elisp:(org-cycle)][| Particulars |]]* :: Authors, version
+** This File: /bisos/git/bxRepos/bisos-pip/pycs/py3/images/spcsArchitecture-graphviz.pcs
+** Authors: Mohsen BANAN, http://mohsen.banan.1.byname.net/contact
+#+end_org """
+####+END:
+
+""" #+begin_org
+* Overview
+Architectural figure for the =.spcs= (Spread Planted Command Service)
+pattern. Three color-coded clusters in LR flow, grouped by *what the
+engineer sees when building a new capability*:
+
+  1. *PyCS Infrastructure* --- everything frozen and reusable that ships
+     as bisos-pip packages: the .spcs/.pcs mechanism (bisos.csSeed), the
+     fto walker + branch-side .spcs framework + WalkExampleSpec dataclass
+     (bisos.fileObj). Domain-agnostic. Consumed as-is.
+
+  2. *Custom Seed* --- the one thing the engineer authors per new domain:
+     a =<domain>-seed.cs= CSXU + its =_seedInfo.py= (paramsFromPlantPath +
+     walkExamples) + =_csu.py= (the Cmnds) + a domain-specific leaf .spcs
+     that plants it. Today: containerProc. Tomorrow: lcntProc, staticWeb, ...
+
+  3. *Planted Tree* --- the on-disk BPO tree the engineer builds by
+     *planting*, not by writing Python. Marker files (_tree_, _treeProc_),
+     planted ftoBranchProc.spcs at branches, planted leaf .spcs at leaves,
+     plus the leaf payload itself.
+
+Takeaway: (1) is given, (2) is the creative act, (3) is the resulting
+consumable artifact.
+#+end_org """
+
+from bisos import b
+from bisos.b import cs
+
+import graphviz
+
+from bisos.graphviz import graphvizSeed
+ng = graphvizSeed.namedGraph
+
+
+####+BEGIN: b:py3:cs:orgItem/basic :type "=Seed Setup= " :title "*Common Facilities*" :comment "General"
+""" #+begin_org
+*  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_  =Seed Setup=  [[elisp:(outline-show-subtree+toggle)][||]] *Common Facilities* General
+#+end_org """
+####+END:
+
+namedGraphsList = [
+    # Forward reference: spcsArchitecture is defined below this block.
+    ng("spcsArchitecture",
+       func=lambda: spcsArchitecture(),
+       title="Spread Planted Command Service Architecture",
+       caption="Three color-coded clusters in left-to-right flow, grouped "
+               "by what the engineer sees: (1) PyCS Infrastructure --- "
+               "frozen framework consumed as-is (bisos.csSeed .spcs "
+               "mechanism, bisos.fileObj walker + branch .spcs framework + "
+               "WalkExampleSpec); (2) Custom Seed --- the one thing "
+               "authored per new domain (a domain-seed CSXU with "
+               "walkExamples() plus its leaf .spcs); (3) Planted Tree --- "
+               "the on-disk BPO tree the engineer builds by planting, not "
+               "by writing Python. Today's concrete instance is "
+               "bisos.dockerProc + bro_dockerfiles; future instances "
+               "(lcntProc, staticWebProc, ...) follow the same pattern."),
+]
+
+graphvizSeed.setup(
+    seedType="common",
+    namedGraphsList=namedGraphsList,
+)
+
+####+BEGIN: b:py3:cs:func/typing :funcName "spcsArchitecture" :funcType "Typed" :deco "track"
+""" #+begin_org
+*  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_  F-T-Typed  [[elisp:(outline-show-subtree+toggle)][||]] /spcsArchitecture/  deco=track
+#+end_org """
+@cs.track(fnLoc=True, fnEntry=True, fnExit=True)
+def spcsArchitecture(
+####+END:
+) -> graphviz.Digraph:
+    """ #+begin_org
+** [[elisp:(org-cycle)][| *DocStr | ]  Three-cluster LR architecture:
+    PyCS Substrate (left) --> Tree Abstraction (middle) --> Concrete Consumers (right).
+    #+end_org """
+
+    d = graphviz.Digraph()
+    d.attr(rankdir='TB')  # top-to-bottom stack: Box 1 → Box 2 → Box 3
+    d.attr(labeljust='l', ranksep='0.9', nodesep='0.4')
+    d.attr(newrank='true')
+    d.attr(splines='spline')
+    d.attr(fontsize='11')
+
+    # Colour convention (documented in README, not on figure):
+    #   lightsteelblue  = Box 1: PyCS Infrastructure (frozen, consumed as-is)
+    #   mistyrose       = Box 2: Custom Seed (authored per domain)
+    #   darkseagreen3   = Box 3: Planted Tree (on-disk BPO)
+    #   salmon          = dispatcher / walker Cmnd / .spcs
+    #   lightblue       = declared typed data (WalkExampleSpec / walkExamples)
+    #   lightyellow     = marker files / on-disk artifact
+    #   thistle         = engineer / user
+    #   dodgerblue edge = data flow / import ("is a", "populates")
+    #   purple edge     = runtime dispatch (walk flow)
+    #   dashed edge     = internal wiring / authoring relationship
+
+    # ==================================================================
+    # Box 1 (LEFT): PyCS Infrastructure --- frozen framework, consumed as-is.
+    # Contents: .spcs mechanism (bisos.csSeed) + fto walker/framework/
+    # WalkExampleSpec (bisos.fileObj).
+    # ==================================================================
+    with d.subgraph(name='cluster_infra') as c:
+        c.attr(label='(1) PyCS Infrastructure --- frozen framework (bisos.csSeed + bisos.fileObj) --- consumed as-is',
+               style='filled', fillcolor='lightsteelblue',
+               fontsize='14', fontname='bold')
+
+        # Put all Box 1 nodes on the same horizontal rank.
+        # Node declaration order + invisible ordering edges control L→R.
+        with c.subgraph() as row:
+            row.attr(rank='same')
+            row.node('inf_spcs_mech',
+                     '.spcs / .pcs mechanism\n(bisos.csSeed)\nplantWithWhich() +\natexit registrar +\nseededCsxuInfo',
+                     shape='rectangle', style='filled', fillcolor='white')
+
+            row.node('inf_branch_spcs',
+                     'ftoBranchProc.spcs\n+ ftoBranch-seed.cs\n(branch-side .spcs)',
+                     shape='rarrow', style='filled', fillcolor='salmon',
+                     margin='0.25,0.15')
+
+            row.node('inf_walker',
+                     'fto walker + Cmnds\n(treeRecurse,\nfto_forwardToLeaves,\nfto_walkRunExternal)',
+                     shape='rectangle', style='filled', fillcolor='white')
+
+            row.node('inf_spec',
+                     'WalkExampleSpec\n(dataclass:\ncmndName, pars, args,\ncomment, mode, tags)',
+                     shape='rectangle', style='filled', fillcolor='lightblue')
+
+            # Invisible L→R ordering edges within the row.
+            row.edge('inf_spcs_mech', 'inf_branch_spcs', style='invis', weight='100')
+            row.edge('inf_branch_spcs', 'inf_walker', style='invis', weight='100')
+            row.edge('inf_walker', 'inf_spec', style='invis', weight='100')
+
+        # Internal wiring within Box 1 (weak constraints so they don't distort the row).
+        c.edge('inf_branch_spcs', 'inf_spcs_mech',
+               style='dashed', arrowhead='vee',
+               label='is a', fontsize='10', constraint='false')
+        c.edge('inf_branch_spcs', 'inf_walker',
+               style='dashed', arrowhead='vee',
+               label='drives', fontsize='10', constraint='false')
+        c.edge('inf_spec', 'inf_branch_spcs',
+               style='dashed', arrowhead='vee',
+               label='rendered by', fontsize='10', constraint='false')
+
+    # ==================================================================
+    # Box 2 (MIDDLE): Custom Seed --- authored once per new domain.
+    # ==================================================================
+    with d.subgraph(name='cluster_seed') as c:
+        c.attr(label='(2) Custom Seed --- authored per new domain (containerProc today; lcntProc, staticWebProc, ... tomorrow)',
+               style='filled', fillcolor='mistyrose',
+               fontsize='14', fontname='bold')
+
+        # Put all Box 2 nodes on the same horizontal rank.
+        with c.subgraph() as row:
+            row.attr(rank='same')
+            row.node('seed_csu',
+                     '<domain>_csu.py\n(the actual Cmnds:\ncontainerProc_imageBuild,\ncontainerProc_instanceUp,\n...)',
+                     shape='rectangle', style='filled', fillcolor='white')
+
+            row.node('seed_info',
+                     '<domain>_seedInfo.py\nparamsFromPlantPath()\n+ walkExamples()',
+                     shape='rectangle', style='filled', fillcolor='white')
+
+            row.node('seed_walkex',
+                     'walkExamples()\n→ list of\nWalkExampleSpec\n(SOURCE OF TRUTH\nfor "what to walk with")',
+                     shape='rectangle', style='filled', fillcolor='lightblue')
+
+            row.node('seed_cs',
+                     '<domain>-seed.cs\n(seed CSXU:\ncsuList + g_csMain)',
+                     shape='rectangle', style='filled', fillcolor='white')
+
+            row.node('seed_leaf_spcs',
+                     'leaf .spcs\n(dockerProc.spcs,\nlcntProc.spcs, ...)',
+                     shape='rarrow', style='filled', fillcolor='salmon',
+                     margin='0.25,0.15')
+
+            # Invisible L→R ordering edges within the row.
+            row.edge('seed_csu', 'seed_info', style='invis', weight='100')
+            row.edge('seed_info', 'seed_walkex', style='invis', weight='100')
+            row.edge('seed_walkex', 'seed_cs', style='invis', weight='100')
+            row.edge('seed_cs', 'seed_leaf_spcs', style='invis', weight='100')
+
+        # Internal wiring within Box 2.
+        c.edge('seed_csu', 'seed_cs',
+               style='dashed', arrowhead='vee',
+               label='in csuList', fontsize='10', constraint='false')
+        c.edge('seed_info', 'seed_cs',
+               style='dashed', arrowhead='vee',
+               label='consulted by', fontsize='10', constraint='false')
+        c.edge('seed_walkex', 'seed_info',
+               style='dashed', arrowhead='vee',
+               label='defined in', dir='back', fontsize='10', constraint='false')
+        c.edge('seed_leaf_spcs', 'seed_cs',
+               style='dashed', arrowhead='vee',
+               label='plants', fontsize='10', constraint='false')
+
+    # ==================================================================
+    # Box 3 (RIGHT): Planted Tree --- the on-disk BPO tree.
+    # ==================================================================
+    with d.subgraph(name='cluster_tree') as c:
+        c.attr(label='(3) Planted Tree --- built by planting, not writing Python (bro_dockerfiles today; bro_lcnt, ... tomorrow)',
+               style='filled', fillcolor='darkseagreen3',
+               fontsize='14', fontname='bold')
+
+        # Put all Box 3 nodes on the same horizontal rank (left-to-right
+        # tree walk: root → branch → auxBranch → leaf).
+        with c.subgraph() as row:
+            row.attr(rank='same')
+            row.node('tree_bpo',
+                     'BPO tree root\nbro_dockerfiles/\n(bro_lcnt/, ... future)',
+                     shape='folder', style='filled', fillcolor='lightyellow')
+
+            row.node('tree_branch_dir',
+                     'branch/ dir\n_tree_=branch\n_treeProc_=\nftoBranchProc.spcs\n+ planted .spcs',
+                     shape='folder', style='filled', fillcolor='lightyellow')
+
+            row.node('tree_aux_dir',
+                     'auxBranch/ dir\n(pass-through)\n_tree_=auxBranch',
+                     shape='folder', style='filled', fillcolor='lightyellow')
+
+            row.node('tree_leaf_dir',
+                     'leaf/ dir\n_tree_=leaf\n_treeProc_=<domain>.spcs\n+ planted leaf .spcs\n+ leaf payload\n(Dockerfile, LaTeX, ...)',
+                     shape='folder', style='filled', fillcolor='lightyellow')
+
+            # Invisible L→R ordering edges within the row.
+            row.edge('tree_bpo', 'tree_branch_dir', style='invis', weight='100')
+            row.edge('tree_branch_dir', 'tree_aux_dir', style='invis', weight='100')
+            row.edge('tree_aux_dir', 'tree_leaf_dir', style='invis', weight='100')
+
+        # Internal wiring within Box 3 (the tree hierarchy).
+        c.edge('tree_bpo', 'tree_branch_dir',
+               arrowhead='none', label='contains', fontsize='10', constraint='false')
+        c.edge('tree_branch_dir', 'tree_aux_dir',
+               arrowhead='none', fontsize='10', constraint='false')
+        c.edge('tree_aux_dir', 'tree_leaf_dir',
+               arrowhead='none', fontsize='10', constraint='false')
+
+    # ==================================================================
+    # Anchor edges (invisible): force the stack to read Box 3 (top) →
+    # Box 2 (middle) → Box 1 (bottom). Infrastructure sits at the bottom
+    # as the foundation everything else rests on (standard layered-
+    # architecture convention); Box 1 numbering still means "foundation".
+    # ==================================================================
+    d.edge('tree_branch_dir', 'seed_cs', style='invis', weight='10')
+    d.edge('seed_cs', 'inf_walker', style='invis', weight='10')
+
+    # ==================================================================
+    # Inter-box edges: the composition story.
+    # ==================================================================
+
+    # Box 1 ← Box 2: leaf .spcs "is a" .spcs mechanism (uses Box 1 substrate).
+    d.edge('seed_leaf_spcs', 'inf_spcs_mech',
+           color='dodgerblue', style='solid', penwidth='2',
+           label='is a', fontcolor='dodgerblue',
+           dir='back',
+           constraint='false')
+
+    # Box 1 ↔ Box 2: walkExamples() populates the typed WalkExampleSpec.
+    d.edge('seed_walkex', 'inf_spec',
+           color='dodgerblue', style='solid', penwidth='2',
+           label='populates', fontcolor='dodgerblue',
+           dir='back',
+           constraint='false')
+
+    # Box 1 → Box 3: ftoBranchProc.spcs is PLANTED into branch dirs.
+    d.edge('inf_branch_spcs', 'tree_branch_dir',
+           color='dodgerblue', style='dotted', penwidth='2',
+           label='planted at branches',
+           fontcolor='dodgerblue',
+           constraint='false')
+
+    # Box 2 → Box 3: leaf .spcs (from custom seed) is PLANTED into leaf dirs.
+    d.edge('seed_leaf_spcs', 'tree_leaf_dir',
+           color='dodgerblue', style='dotted', penwidth='2',
+           label='planted at leaves',
+           fontcolor='dodgerblue',
+           constraint='false')
+
+    # Runtime: fto walker Cmnds dispatch to the leaf's planted .spcs.
+    d.edge('inf_walker', 'tree_leaf_dir',
+           color='purple', style='solid', penwidth='2',
+           label='walks to',
+           fontcolor='purple',
+           constraint='false')
+
+    # ==================================================================
+    # Engineer: on the side (right of Box 2), authors Box 2, plants +
+    # invokes Box 3. Placed at the middle rank so the arrows to Box 2 and
+    # Box 3 are short.
+    # ==================================================================
+    d.node('engineer',
+           'engineer',
+           shape='ellipse', style='filled', fillcolor='thistle',
+           width='1.5', fontsize='14')
+
+    # Force engineer to sit at the same rank as Box 2's rightmost node.
+    with d.subgraph() as row:
+        row.attr(rank='same')
+        row.node('seed_leaf_spcs')  # already declared inside cluster
+        row.node('engineer')
+
+    d.edge('engineer', 'seed_cs',
+           style='dashed', arrowhead='vee',
+           label='authors (Box 2)', fontcolor='black',
+           constraint='false')
+    d.edge('engineer', 'tree_branch_dir',
+           style='dashed', arrowhead='vee',
+           label='plants + invokes (Box 3)', fontcolor='black',
+           constraint='false')
+
+    return d
+
+
+### local variables:
+### no-byte-compile: t
+### end:
