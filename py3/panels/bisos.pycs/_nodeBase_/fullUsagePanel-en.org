@@ -38,7 +38,21 @@
 * [[elisp:(show-all)][(>]]  _[[elisp:(blee:menu-sel:outline:popupMenu)][±]]_  _[[elisp:(blee:menu-sel:navigation:popupMenu)][Ξ]]_       [[elisp:(outline-show-subtree+toggle)][| *Overview:* |]] <<Panel>>   [[elisp:(org-shifttab)][<)]] E|
 ####+END
 ** +
-** Overview Comes Here.
+** bisos.pycs is the PyCS framework package (see its README.org). It also holds commands about pip
+   packages themselves: =pyPkgTools.cs= (PyPI versions, dependency updates) and =pipPkgsStatus.cs=.
+** Pip package status --- =pipPkgsStatus.cs= (read-only; module =bisos.pycs.pipPkgsStatus=)
+   - Does a package's editable install in =/bisos/venv/py3/dev-bisos3= need a reinstall (=ok=,
+     =devbinClean=, =reinstall=, =regenerate=):
+     [[bashRun:pipPkgsStatus.cs -i pkgLocalStatus /bisos/git/bxRepos/bisos-pip/pycs]]
+   - Does PyPI need a push, =/bisos/venv/py3/bisos3= an update (=uncommitted=, =unpushed=,
+     =notOnPypi=, =push=, =update=, =ok=):
+     [[bashRun:pipPkgsStatus.cs -i pkgReleaseStatus /bisos/git/bxRepos/bisos-pip/pycs]]
+   - One row per package under =/bisos/git/bxRepos/bisos-pip=, in or out of what BISOS installs:
+     [[bashRun:pipPkgsStatus.cs -i pkgsStatus]]
+   - All examples: [[bashRun:pipPkgsStatus.cs]]
+   - Acting on a row, in the package's =py3=:
+     =./pypiProc.sh -i pkgReInstall edit /bisos/venv/py3/dev-bisos3= (reinstall; regenerates =setup.py= when =G_emacsServerPid= is set, as it is in Blee's shells);
+     =./pypiProc.sh -p repo=main -i fullPrepBuildUploadRePrep= (push; the =bisos-pip-release= skill).
 ** B|
 ####+BEGIN: blee:bxPanel:separator :outLevel 1
 * /[[elisp:(beginning-of-buffer)][|^]] [[elisp:(blee:menu-sel:navigation:popupMenu)][==]] [[elisp:(delete-other-windows)][|1]]/

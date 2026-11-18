@@ -1,0 +1,60 @@
+#+title: Development Status & Continuation Handoff
+#+TAGS: me ai aiAndMe
+
+# Provenance (installed once by aiActivity.cs --- not regenerated):
+#   Date:      2026-11-15T01:21:43+00:00
+#   User:      bystar
+#   Templates: /bisos/apps/defaults/ai-templates
+#   Command:   /bisos/venv/py3/devbin/aiActivity.cs -i initiate --activity=bisos-pip
+
+####+BEGIN: b:ai:file/particulars
+* AI Working Context
+  Working Directory: /bisos/git/auth/bxRepos/bisos-pip/pycs
+  File: /bisos/git/auth/bxRepos/bisos-pip/pycs/AI-DevStatus.org
+  Activity: bisos-pip
+  Companion Docs: AI-WORKFLOW.org, AI-Activity.org, AI-DevStatus.org, README.org
+####+END:
+
+This file is a working-state handoff so development can continue on another
+machine (which has this repo but NOT the developer's =~=). It captures the
+architecture, what works, what is untested and the design decisions made so far.
+
+This file is maintained by Claude. Updates are typically triggered by the
+=/bx-status-update= slash command, after major interactions, or before a release.
+
+Note to a fresh Claude: this file is intentionally sparse at project start.
+Fill in the sections below when asked to update, following the structure provided.
+
+* Current State
+
+2026-11-15 --- AI-Activity started for WorkPlan Stage 2 (package status commands), decided in
+=bisos-pip/overview= WorkPlan 4.1. 2.1 done (uncommitted): =setup.py= regenerated (the deleted
+=bin/fileParamManage-k1.cs= dropped), =README.rst= / =_description.org= regenerated, and the package
+installed editable into =/bisos/venv/py3/dev-bisos3=. 2.2 done (uncommitted): =pipPkgsStatus.cs -i
+pkgLocalStatus <repo> [venv]= over the module =bisos.pycs.pipPkgsStatus= (=localStatus()=), tested on
+pycs, capability, b, full, webCap, lcnt, marme. 2.3 done (uncommitted): =pkgReleaseStatus <repo>
+[venv]= (=releaseStatus()=: bisos3's RECORD vs. git HEAD, PyPI's version vs. bisos3's). 2.4 done
+(uncommitted): =pkgsStatus [base]=, one row per package, in or out of an interim scope
+(=bisos.py3-all='s closure + =rawBisos-sbom.pcs=); README and the Blee panel's Overview describe the
+three commands. Open: 2.5 (scope from =-sbom.pcs= only, =uninstall= action), deferred.
+
+- Out-of-chain record (pointer, not a copy): =bx-dblock= outside Emacs updates nothing and exits 0, so
+  =pkgReInstall= keeps a stale =setup.py=; workaround =export G_emacsServerPid=<blee emacs pid>=. In the
+  ledger =blee-binders/evolution/aiActivity-outputs/_nodeBase_/AI-Outputs.org= (FOUND 2026-11-15;
+  =evolution= repo, uncommitted when written). Actionable when blee / =seedPypiProc.sh= is fixed.
+
+* Architecture
+  [Key components, file structure, entry points]
+
+* What Works
+  [Verified functionality]
+
+* What Is Untested
+  [Known gaps]
+
+* Key Design Decisions
+  [Non-obvious choices and their rationale]
+
+# Local Variables:
+# eval: (setq-local toc-org-max-depth 4)
+# End:

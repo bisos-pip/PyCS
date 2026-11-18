@@ -2,6 +2,7 @@
 bisos.PyCS: Python Command-Services Framework.
 ==============================================
 
+
 .. contents::
    :depth: 3
 ..
@@ -13,7 +14,7 @@ Panel Controls:: `Show-All <elisp:(show-all)>`__
 `S&Q <elisp:(progn (save-buffer) (kill-buffer))>`__
 `Save <elisp:(save-buffer)>`__ `Quit <elisp:(kill-buffer)>`__
 `Bury <elisp:(bury-buffer)>`__ Links:
-`file:./panels/_nodeBase_/fullUsagePanel-en.org <./panels/_nodeBase_/fullUsagePanel-en.org>`__
+`file:./panels/\_nodeBase\_/fullUsagePanel-en.org <./panels/_nodeBase_/fullUsagePanel-en.org>`__
 (Package Panel)
 
 Overview
@@ -45,6 +46,7 @@ Table of Contents TOC
 -  `bisos.PyCS is a Command Services (PyCS)
    Facility <#bisospycs-is-a-command-services-pycs-facility>`__
 -  `Uses of bisos.PyCS <#uses-of-bisospycs>`__
+-  `Pip Package Tools <#pip-package-tools>`__
 -  `bisos.PyCS as a Standalone Piece of
    BISOS <#bisospycs-as-a-standalone-piece-of-bisos>`__
 -  `Installation <#installation>`__
@@ -65,7 +67,8 @@ Table of Contents TOC
 
       -  `bisos.PyCS Source Code is in writen in COMEEGA (Collaborative
          Org-Mode Enhanced Emacs Generalized Authorship)
-         – <#bisospycs-source-code-is-in-writen-in-comeega-collaborative-org-mode-enhanced-emacs-generalized-authorship----httpsgithubcombx-bleecomeega>`__\ https://github.com/bx-blee/comeega\ `. <#bisospycs-source-code-is-in-writen-in-comeega-collaborative-org-mode-enhanced-emacs-generalized-authorship----httpsgithubcombx-bleecomeega>`__
+         – <#bisospycs-source-code-is-in-writen-in-comeega-collaborative-org-mode-enhanced-emacs-generalized-authorship----httpsgithubcombx-bleecomeega>`__
+         https://github.com/bx-blee/comeega\ `. <#bisospycs-source-code-is-in-writen-in-comeega-collaborative-org-mode-enhanced-emacs-generalized-authorship----httpsgithubcombx-bleecomeega>`__
       -  `The primary API for bisos.PyCS is ./bisos/PyCS/PyCS-csu.py. It
          is self documented in
          COMEEGA. <#the-primary-api-for-bisospycs-is-bisospycspycs-csupy-it-is-self-documented-in-comeega>`__
@@ -119,6 +122,66 @@ Uses of bisos.PyCS
 ==================
 
 Within BISOS, bisos.PyCS is used as a common facility.
+
+**Spread Planted Command Services (``.spcs``)** — a PyCS pattern for
+planting identical file content at many filesystem locations and letting
+each planted instance be characterised by its directory. When composed
+with ``bisos.fileObj``'s tree walker, ``.spcs`` becomes a
+general-purpose framework for walkable trees (``bisos.dockerProc`` over
+``bro_dockerfiles`` is the first end-to-end consumer; future consumers
+include ``bisos.lcnt``, static-web publication, and others). See
+`spcs/README.org <spcs/README.org>`__ for architecture, figure, and
+canonical references.
+
+Pip Package Tools
+=================
+
+Commands about pip packages themselves, for whoever develops bisos-pip
+packages; a ``pipx install
+bisos.PyCS`` is enough (no full BISOS).
+
++----------------------+----------------------------------------------+
+| Command              | What it does                                 |
++======================+==============================================+
+| ``pyPkgTools.cs``    | PyPI's latest version (and next), pip / pipx |
+|                      | dependency updates                           |
++----------------------+----------------------------------------------+
+| ``pipPkgsStatus.cs`` | ``pkgLocalStatus <repo> [venv]``: does the   |
+|                      | editable install need a                      |
++----------------------+----------------------------------------------+
+|                      | reinstall; the action (``ok``,               |
+|                      | ``devbinClean``, ``reinstall``,              |
+|                      | ``regenerate``)                              |
++----------------------+----------------------------------------------+
+|                      | and why                                      |
++----------------------+----------------------------------------------+
+|                      | ``pkgReleaseStatus <repo> [venv]``: does     |
+|                      | PyPI need a push, bisos3 an                  |
++----------------------+----------------------------------------------+
+|                      | update; the first thing to do                |
+|                      | (``uncommitted``, ``unpushed``,              |
+|                      | ``notOnPypi``,                               |
++----------------------+----------------------------------------------+
+|                      | ``push``, ``update``, ``ok``) and why        |
++----------------------+----------------------------------------------+
+
+Both are read-only; the module is ``bisos.pycs.pipPkgsStatus``.
+
+-  ``pkgLocalStatus`` (venv default ``/bisos/venv/dev-bisos3``) compares
+   what pip and ``/bisos/venv/devbin`` recorded at install time with the
+   repo: installed editable from this repo; ``py3/bin`` vs.
+   ``setup.py``'s ``scripts``; ``py3/bin`` vs. the devbin symlinks and
+   vs. pip's copies in the venv's ``bin/`` (they run when the venv is
+   activated); ``setup.py`` newer than the install; ``pip check``.
+   Python edits never need a reinstall.
+-  ``pkgReleaseStatus`` (venv default ``/bisos/venv/bisos3``, installed
+   from PyPI) compares the released files (that install's ``RECORD``)
+   with the repo's committed files (git ``HEAD``; a script's shebang,
+   which pip rewrites, is ignored), and PyPI's latest version (its JSON
+   API) with the venv's. Only committed and pushed changes call for a
+   push; uncommitted and unpushed work is reported first.
+
+To come: one table over all packages.
 
 bisos.PyCS as a Standalone Piece of BISOS
 =========================================
